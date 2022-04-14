@@ -50,7 +50,7 @@ class Play extends Phaser.Scene {
         this.p1Score = 0;
 
         // display score
-        let scoreConfig = {
+        this.scoreConfig = {
             fontFamily: 'Courier',
             fontSize: '28px',
             backgroundColor: '#F3B141',
@@ -62,22 +62,48 @@ class Play extends Phaser.Scene {
             },
             fixedWidth: 100
         }
-        this.scoreLeft = this.add.text(borderUISize + borderPadding, borderUISize + borderPadding*2, this.p1Score, scoreConfig);
+        this.scoreLeft = this.add.text(borderUISize + borderPadding, borderUISize + borderPadding*2, this.p1Score, this.scoreConfig);
 
         // GAME OVER flag
         this.gameOver = false;
 
-        // 60-second play clock
-        scoreConfig.fixedWidth = 0;
-        this.clock = this.time.delayedCall(game.settings.gameTimer, () => {
-            this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', scoreConfig).setOrigin(0.5);
-            this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or <- for Menu.', scoreConfig).setOrigin(0.5);
-            this.gameOver = true;
-        }, null, this);
+        // 60-second or 45-second initial play clock
+        this.timeLeft = (game.settings.gameTimer / 1000) * 60;
+        this.scoreConfig.fixedWidth = 0;
+
+        // display clock
+        let clockConfig = {
+            fontFamily: 'Courier',
+            fontSize: '28px',
+            backgroundColor: '#F3B141',
+            color: '#843605',
+            align: 'right',
+            padding: {
+            top: 5,
+            bottom: 5,
+            },
+            fixedWidth: 100
+        }
+        this.clockMiddle = this.add.text(borderUISize + borderPadding + 225, borderUISize + borderPadding*2, this.timeLeft / 60.0, clockConfig);
     }
 
     update() {
 
+        // advance the internal timer
+        this.timeLeft -= 1;
+
+        // if there is no time left, prompt the game over
+        if (this.timeLeft == 0) { 
+            this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', this.scoreConfig).setOrigin(0.5);
+            this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or <- for Menu.', this.scoreConfig).setOrigin(0.5);
+            this.gameOver = true;
+        }
+
+        // advance the clock display every .1 seconds (6 frames)
+        if (this.timeLeft % 6 == 0 && this.timeLeft >= 0) {
+            this.clockMiddle.text = this.timeLeft / 60.0;
+        }
+        
         // check key input for restart
         if (this.gameOver && Phaser.Input.Keyboard.JustDown(keyR)) {
             this.scene.restart();
@@ -136,7 +162,10 @@ class Play extends Phaser.Scene {
         });
         // score add and repaint
         this.p1Score += ship.points;
-        this.scoreLeft.text = this.p1Score;      
+        this.scoreLeft.text = this.p1Score;
+
+        // add time for destroying ship
+        this.timeLeft += 60;
         
         this.sound.play('sfx_explosion');
     }
